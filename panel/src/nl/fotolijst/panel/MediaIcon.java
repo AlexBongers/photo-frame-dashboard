@@ -41,8 +41,11 @@ final class MediaIcon extends View {
 
   @Override
   protected void onDraw(Canvas c) {
-    float s = Math.min(getWidth(), getHeight());
-    c.translate((getWidth() - s) / 2f, (getHeight() - s) / 2f);
+    float w = getWidth() - getPaddingLeft() - getPaddingRight();
+    float h = getHeight() - getPaddingTop() - getPaddingBottom();
+    float s = Math.min(w, h);
+    c.translate(getPaddingLeft() + (w - s) / 2f, getPaddingTop() + (h - s) / 2f);
+    paint.setPathEffect(new android.graphics.CornerPathEffect(s * 0.07f));
     paint.setColor(color);
     paint.setStyle(Paint.Style.FILL);
     paint.setStrokeCap(Paint.Cap.ROUND);

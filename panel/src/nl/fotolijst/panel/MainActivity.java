@@ -881,17 +881,17 @@ public class MainActivity extends Activity implements HaClient.Listener {
       c.setTimeInMillis(dayStart);
       String tag = dayStart == todayStart ? "  ·  vandaag" : dayStart == Fmt.addDays(todayStart, 1) ? "  ·  morgen" : "";
       LinearLayout block = vbox();
-      block.addView(tv(Fmt.dayLong(c) + tag, 22, cAccent, true));
+      block.addView(tv(Fmt.dayLong(c) + tag, 24, cAccent, true));
       for (Event e : today) {
         LinearLayout line = hbox();
         String when = e.allDay ? "hele dag" : Fmt.time(e.start) + " – " + Fmt.time(e.end);
         line.addView(tv(when, 20, cSub, false), lp(dp(142), ViewGroup.LayoutParams.WRAP_CONTENT, 0));
-        TextView title = tv(e.title, 22, cText, false);
+        TextView title = tv(e.title, 24, cText, false);
         title.setMaxLines(2);
         title.setEllipsize(android.text.TextUtils.TruncateAt.END);
         line.addView(title, lp(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1));
         LinearLayout.LayoutParams p = lp(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT, 0);
-        p.topMargin = dp(3);
+        p.topMargin = dp(1);
         block.addView(line, p);
       }
       blocks.add(block);
@@ -910,7 +910,7 @@ public class MainActivity extends Activity implements HaClient.Listener {
       boolean toLeft = used < totalLines / 2.0 || i == 0;
       LinearLayout target = toLeft ? left : right;
       LinearLayout.LayoutParams bp = lp(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT, 0);
-      bp.topMargin = target.getChildCount() == 0 ? 0 : dp(12);
+      bp.topMargin = target.getChildCount() == 0 ? 0 : dp(8);
       target.addView(blocks.get(i), bp);
       if (toLeft) used += lines.get(i);
     }
@@ -998,6 +998,18 @@ public class MainActivity extends Activity implements HaClient.Listener {
     }
   }
 
+  private static String fanLabel(String f) {
+    switch (f) {
+      case "silent": return "Stil";
+      case "low": return "Laag";
+      case "medium": return "Middel";
+      case "high": return "Hoog";
+      case "max": return "Max";
+      case "auto": return "Auto";
+      default: return f.substring(0, 1).toUpperCase(java.util.Locale.ROOT) + f.substring(1);
+    }
+  }
+
   private static String shortMode(String m) {
     switch (m) {
       case "cool": return "Koel";
@@ -1049,6 +1061,14 @@ public class MainActivity extends Activity implements HaClient.Listener {
       modeButtons[i] = b;
     }
     card.addView(modeRow, mp);
+
+    // Fan speed presets, built from the fan_modes the device reports
+    final LinearLayout fanRow = hbox();
+    fanRow.setVisibility(View.GONE);
+    final String[] fanKey = {""};
+    LinearLayout.LayoutParams fp = lp(ViewGroup.LayoutParams.MATCH_PARENT, dp(56), 0);
+    fp.topMargin = dp(8);
+    card.addView(fanRow, fp);
 
     final double[] target = {Double.NaN};
     final double[] step = {1};
@@ -1109,6 +1129,37 @@ public class MainActivity extends Activity implements HaClient.Listener {
         boolean active = modes[i].equals(s.state);
         modeButtons[i].setBackground(pressable(active ? cAccent : cBorder, 0));
         modeButtons[i].setTextColor(active ? (dark ? 0xFF0F1115 : 0xFFFFFFFF) : cText);
+      }
+      JSONArray fans = s.attrs.optJSONArray("fan_modes");
+      String fanNow = s.attrs.optString("fan_mode", "");
+      String key = fans == null ? "" : fans.toString();
+      if (!key.equals(fanKey[0])) {
+        fanKey[0] = key;
+        fanRow.removeAllViews();
+        for (int k = 0; fans != null && k < fans.length(); k++) {
+          final String fan = fans.optString(k);
+          if ("custom".equals(fan)) continue;
+          TextView fb = tv(fanLabel(fan), 19, cText, true);
+          fb.setGravity(Gravity.CENTER);
+          fb.setTag(fan);
+          fb.setOnClickListener(v -> {
+            try {
+              ha.callService("climate", "set_fan_mode", new JSONObject().put("entity_id", entity).put("fan_mode", fan));
+            } catch (Exception ignored) {
+              // cannot happen for plain strings
+            }
+          });
+          LinearLayout.LayoutParams bp = lp(0, ViewGroup.LayoutParams.MATCH_PARENT, 1);
+          bp.setMargins(dp(3), 0, dp(3), 0);
+          fanRow.addView(fb, bp);
+        }
+      }
+      fanRow.setVisibility(fanRow.getChildCount() > 0 ? View.VISIBLE : View.GONE);
+      for (int k = 0; k < fanRow.getChildCount(); k++) {
+        TextView fb = (TextView) fanRow.getChildAt(k);
+        boolean active = fb.getTag().equals(fanNow);
+        fb.setBackground(pressable(active ? cAccent : cBorder, 0));
+        fb.setTextColor(active ? (dark ? 0xFF0F1115 : 0xFFFFFFFF) : cText);
       }
       step[0] = s.attrs.optDouble("target_temp_step", 1);
       if (step[0] <= 0) step[0] = 1;
@@ -1351,7 +1402,7 @@ public class MainActivity extends Activity implements HaClient.Listener {
 
     // Speakers
     LinearLayout left = vbox();
-    TextView speakersTitle = tv("SPELERS", 14, cSub, true);
+    TextView speakersTitle = tv("SPELERS", 16, cSub, true);
     speakersTitle.setLetterSpacing(0.14f);
     speakersTitle.setPadding(dp(8), dp(4), 0, dp(10));
     left.addView(speakersTitle);
@@ -1362,19 +1413,19 @@ public class MainActivity extends Activity implements HaClient.Listener {
       LinearLayout tile = vbox();
       tile.setGravity(Gravity.CENTER_VERTICAL);
       tile.setPadding(dp(16), dp(8), dp(12), dp(8));
-      TextView name = tv(def.optString("name"), 22, cText, true);
-      TextView state = tv("", 16, cSub, false);
+      TextView name = tv(def.optString("name"), 24, cText, true);
+      TextView state = tv("", 18, cSub, false);
       tile.addView(name);
       tile.addView(state);
       tile.setOnClickListener(v -> selectPlayer(id));
       musicTileName.add(name);
       musicTileState.add(state);
       musicTiles.add(tile);
-      LinearLayout.LayoutParams tp = lp(ViewGroup.LayoutParams.MATCH_PARENT, dp(76), 0);
+      LinearLayout.LayoutParams tp = lp(ViewGroup.LayoutParams.MATCH_PARENT, dp(88), 0);
       tp.bottomMargin = dp(10);
       left.addView(tile, tp);
     }
-    LinearLayout.LayoutParams leftParams = lp(dp(220), ViewGroup.LayoutParams.MATCH_PARENT, 0);
+    LinearLayout.LayoutParams leftParams = lp(dp(230), ViewGroup.LayoutParams.MATCH_PARENT, 0);
     leftParams.setMargins(dp(4), 0, dp(10), 0);
     root.addView(left, leftParams);
 
@@ -1405,19 +1456,19 @@ public class MainActivity extends Activity implements HaClient.Listener {
     musicArt.setScaleType(ImageView.ScaleType.CENTER_CROP);
     artBox.addView(musicArt, new FrameLayout.LayoutParams(
         ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
-    LinearLayout.LayoutParams artParams = lp(dp(330), dp(330), 0);
+    LinearLayout.LayoutParams artParams = lp(dp(310), dp(310), 0);
     artParams.setMargins(dp(4), dp(4), dp(8), dp(10));
     top.addView(artBox, artParams);
 
     LinearLayout info = vbox();
     info.setPadding(dp(20), dp(4), 0, dp(10));
-    musicTitle = tv("", 32, cText, true);
+    musicTitle = tv("", 34, cText, true);
     musicTitle.setMaxLines(3);
     musicTitle.setEllipsize(android.text.TextUtils.TruncateAt.END);
-    musicArtist = tv("", 24, cText, false);
+    musicArtist = tv("", 26, cText, false);
     musicArtist.setMaxLines(1);
     musicArtist.setEllipsize(android.text.TextUtils.TruncateAt.END);
-    musicAlbum = tv("", 19, cSub, false);
+    musicAlbum = tv("", 21, cSub, false);
     musicAlbum.setMaxLines(1);
     musicAlbum.setEllipsize(android.text.TextUtils.TruncateAt.END);
     info.addView(musicTitle);
@@ -1467,11 +1518,17 @@ public class MainActivity extends Activity implements HaClient.Listener {
     prev.setOnClickListener(v -> musicCall("media_previous_track", null, null));
     next.setOnClickListener(v -> musicCall("media_next_track", null, null));
     musicPlay.setOnClickListener(v -> musicCall("media_play_pause", null, null));
-    transport.addView(musicShuffle, lp(dp(60), dp(60), 0));
-    transport.addView(prev, lpm(dp(84), dp(84), 16));
-    transport.addView(musicPlay, lpm(dp(112), dp(112), 10));
-    transport.addView(next, lpm(dp(84), dp(84), 16));
-    transport.addView(musicRepeat, lp(dp(60), dp(60), 0));
+    for (View v : new View[] {prev, next}) {
+      v.setPadding(dp(9), dp(9), dp(9), dp(9));
+      v.setBackground(circle(dark ? 0xFF2A2F37 : 0xFFE9EDF1, 0));
+    }
+    for (View v : new View[] {musicShuffle, musicRepeat}) v.setPadding(dp(6), dp(6), dp(6), dp(6));
+    musicPlay.setPadding(dp(20), dp(20), dp(20), dp(20));
+    transport.addView(musicShuffle, lp(dp(50), dp(50), 0));
+    transport.addView(prev, lpm(dp(66), dp(66), 22));
+    transport.addView(musicPlay, lpm(dp(98), dp(98), 8));
+    transport.addView(next, lpm(dp(66), dp(66), 22));
+    transport.addView(musicRepeat, lp(dp(50), dp(50), 0));
     musicCenter.addView(new View(this), lp(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1));
     musicCenter.addView(transport, lp(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT, 0));
 
@@ -1501,8 +1558,8 @@ public class MainActivity extends Activity implements HaClient.Listener {
     // Presets (the Sonos favourites show up as the source list)
     LinearLayout presets = vbox();
     presets.setBackground(rounded(cCard, cBorder, 16));
-    presets.setPadding(dp(14), dp(14), dp(14), dp(10));
-    TextView presetsTitle = tv(page.optString("list_title", musicPlaylists != null ? "PLAYLISTS" : "FAVORIETEN"), 14, cSub, true);
+    presets.setPadding(dp(16), dp(16), dp(16), dp(10));
+    TextView presetsTitle = tv(page.optString("list_title", musicPlaylists != null ? "PLAYLISTS" : "FAVORIETEN"), 16, cSub, true);
     presetsTitle.setLetterSpacing(0.14f);
     presetsTitle.setPadding(dp(6), 0, 0, dp(10));
     presets.addView(presetsTitle);
@@ -1514,7 +1571,7 @@ public class MainActivity extends Activity implements HaClient.Listener {
     searchInput.setHint("Zoek in Spotify…");
     searchInput.setHintTextColor(cSub);
     searchInput.setTextColor(cText);
-    searchInput.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 20);
+    searchInput.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 23);
     searchInput.setSingleLine(true);
     searchInput.setImeOptions(EditorInfo.IME_ACTION_SEARCH);
     searchInput.setBackground(rounded(dark ? 0xFF262A31 : 0xFFEEF1F4, 0, 26));
@@ -1528,13 +1585,13 @@ public class MainActivity extends Activity implements HaClient.Listener {
       }
       return false;
     });
-    searchRow.addView(searchInput, lp(0, dp(52), 1));
+    searchRow.addView(searchInput, lp(0, dp(60), 1));
     searchClear = tv("✕", 22, cSub, true);
     searchClear.setGravity(Gravity.CENTER);
     searchClear.setBackground(pill(dark ? 0xFF262A31 : 0xFFEEF1F4, 0, 26));
     searchClear.setVisibility(View.GONE);
     searchClear.setOnClickListener(v -> leaveSearch());
-    LinearLayout.LayoutParams clearParams = lp(dp(52), dp(52), 0);
+    LinearLayout.LayoutParams clearParams = lp(dp(60), dp(60), 0);
     clearParams.leftMargin = dp(8);
     searchRow.addView(searchClear, clearParams);
     LinearLayout.LayoutParams searchParams = lp(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT, 0);
@@ -1548,10 +1605,19 @@ public class MainActivity extends Activity implements HaClient.Listener {
     presetScroll.addView(presetList, new ViewGroup.LayoutParams(
         ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
     presets.addView(presetScroll, lp(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1));
-    root.addView(presets, lp(dp(350), ViewGroup.LayoutParams.MATCH_PARENT, 0));
+    root.addView(presets, lp(dp(400), ViewGroup.LayoutParams.MATCH_PARENT, 0));
 
     for (String id : musicPlayers) bind(id, this::refreshMusic);
     return root;
+  }
+
+  /** A round fill, or a round ring when only a stroke colour is given. */
+  private GradientDrawable circle(int fill, int ring) {
+    GradientDrawable g = new GradientDrawable();
+    g.setShape(GradientDrawable.OVAL);
+    g.setColor(fill);
+    if (ring != 0) g.setStroke(dp(3), ring);
+    return g;
   }
 
   private LinearLayout.LayoutParams lpm(int w, int h, int margin) {
@@ -1592,7 +1658,7 @@ public class MainActivity extends Activity implements HaClient.Listener {
   }
 
   private TextView searchNote(String text) {
-    TextView t = tv(text, 18, cSub, false);
+    TextView t = tv(text, 20, cSub, false);
     t.setPadding(dp(8), dp(10), dp(8), dp(10));
     return t;
   }
@@ -1633,10 +1699,10 @@ public class MainActivity extends Activity implements HaClient.Listener {
     row.setBackground(pill(dark ? 0xFF262A31 : 0xFFEEF1F4, 0, 18));
     row.setPadding(dp(18), dp(6), dp(8), dp(6));
     LinearLayout text = vbox();
-    TextView name = tv(it.name, 20, cText, true);
+    TextView name = tv(it.name, 23, cText, true);
     name.setMaxLines(1);
     name.setEllipsize(android.text.TextUtils.TruncateAt.END);
-    TextView sub = tv(it.sub, 15, cSub, false);
+    TextView sub = tv(it.sub, 17, cSub, false);
     sub.setMaxLines(1);
     sub.setEllipsize(android.text.TextUtils.TruncateAt.END);
     text.addView(name);
@@ -1650,7 +1716,7 @@ public class MainActivity extends Activity implements HaClient.Listener {
     queue.setOnClickListener(v -> playUri(it.name, it.uri, true));
     row.addView(queue, lp(dp(48), dp(48), 0));
     row.setOnClickListener(v -> playUri(it.name, it.uri, false));
-    LinearLayout.LayoutParams rp = lp(ViewGroup.LayoutParams.MATCH_PARENT, dp(64), 0);
+    LinearLayout.LayoutParams rp = lp(ViewGroup.LayoutParams.MATCH_PARENT, dp(76), 0);
     rp.bottomMargin = dp(8);
     row.setLayoutParams(rp);
     return row;
@@ -1727,10 +1793,18 @@ public class MainActivity extends Activity implements HaClient.Listener {
     musicArtist.setTextColor(mix(accent, cText, 0.55f));
     musicAlbum.setText(ok ? s.attrs.optString("media_album_name", "") : "");
     boolean playing = ok && "playing".equals(s.state);
-    musicPlay.setBackground(rounded(accent, 0, 56));
+    android.graphics.drawable.LayerDrawable playBg = new android.graphics.drawable.LayerDrawable(
+        new android.graphics.drawable.Drawable[] {circle(0, (accent & 0x00FFFFFF) | 0x66000000), circle(accent, 0)});
+    playBg.setLayerInset(0, 0, 0, 0, 0);
+    playBg.setLayerInset(1, dp(7), dp(7), dp(7), dp(7));
+    musicPlay.setBackground(playBg);
     musicPlay.set(playing ? MediaIcon.PAUSE : MediaIcon.PLAY, onAccent());
-    musicShuffle.set(MediaIcon.SHUFFLE, ok && s.attrs.optBoolean("shuffle", false) ? accent : cSub);
-    musicRepeat.set(MediaIcon.REPEAT, ok && !"off".equals(s.attrs.optString("repeat", "off")) ? accent : cSub);
+    boolean shuffleOn = ok && s.attrs.optBoolean("shuffle", false);
+    boolean repeatOn = ok && !"off".equals(s.attrs.optString("repeat", "off"));
+    musicShuffle.set(MediaIcon.SHUFFLE, shuffleOn ? accent : cSub);
+    musicRepeat.set(MediaIcon.REPEAT, repeatOn ? accent : cSub);
+    musicShuffle.setBackground(circle(shuffleOn ? (accent & 0x00FFFFFF) | 0x33000000 : 0, 0));
+    musicRepeat.setBackground(circle(repeatOn ? (accent & 0x00FFFFFF) | 0x33000000 : 0, 0));
     double vol = ok ? s.attrs.optDouble("volume_level", -1) : -1;
     musicVolume.setFill(accent);
     musicVolume.setLevel(vol < 0 ? 0f : (float) vol, true);
@@ -1778,8 +1852,8 @@ public class MainActivity extends Activity implements HaClient.Listener {
       for (int i = 0; i < names.size(); i++) {
         final String name = names.get(i);
         final String id = ids.get(i);
-        TextView b = tv(name, 20, cText, false);
-        b.setPadding(dp(20), 0, dp(16), 0);
+        TextView b = tv(name, 24, cText, false);
+        b.setPadding(dp(22), 0, dp(16), 0);
         b.setGravity(Gravity.CENTER_VERTICAL);
         b.setMaxLines(1);
         b.setEllipsize(android.text.TextUtils.TruncateAt.END);
@@ -1787,7 +1861,7 @@ public class MainActivity extends Activity implements HaClient.Listener {
           if (playlistMode) playPlaylist(name, id);
           else musicCall("select_source", "source", name);
         });
-        LinearLayout.LayoutParams bp = lp(ViewGroup.LayoutParams.MATCH_PARENT, dp(52), 0);
+        LinearLayout.LayoutParams bp = lp(ViewGroup.LayoutParams.MATCH_PARENT, dp(64), 0);
         bp.bottomMargin = dp(8);
         presetList.addView(b, bp);
         presetViews.add(b);
