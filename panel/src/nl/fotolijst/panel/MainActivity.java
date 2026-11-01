@@ -808,6 +808,7 @@ public class MainActivity extends Activity implements HaClient.Listener {
     long start;
     long end;
     boolean allDay;
+    boolean birthday;
     String title;
   }
 
@@ -834,6 +835,7 @@ public class MainActivity extends Activity implements HaClient.Listener {
             if (o == null) continue;
             Event e = new Event();
             e.title = o.optString("summary", "(zonder titel)");
+            e.birthday = id.contains("verjaardag") || e.title.toLowerCase(java.util.Locale.ROOT).matches(".*(jarig|verjaardag).*");
             JSONObject s = o.optJSONObject("start");
             JSONObject en = o.optJSONObject("end");
             if (s == null) continue;
@@ -887,12 +889,22 @@ public class MainActivity extends Activity implements HaClient.Listener {
         LinearLayout line = hbox();
         String when = e.allDay ? "hele dag" : Fmt.time(e.start) + " – " + Fmt.time(e.end);
         line.addView(tv(when, 20, cSub, false), lp(dp(142), ViewGroup.LayoutParams.WRAP_CONTENT, 0));
-        TextView title = tv(e.title, 24, cText, false);
+        TextView title = tv(e.birthday ? birthdayTitle(e.title) : e.title, 24, cText, false);
         title.setMaxLines(2);
         title.setEllipsize(android.text.TextUtils.TruncateAt.END);
         line.addView(title, lp(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1));
         LinearLayout.LayoutParams p = lp(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT, 0);
         p.topMargin = dp(1);
+        if (e.birthday) {
+          // Birthdays get a warm yellow band with party emoji
+          line.setBackground(rounded(cOnBg, 0, 10));
+          line.setPadding(dp(8), dp(2), dp(8), dp(2));
+          title.setTextColor(cOnText);
+          title.setTypeface(title.getTypeface(), android.graphics.Typeface.BOLD);
+          ((TextView) line.getChildAt(0)).setTextColor(cOnText);
+          p.topMargin = dp(2);
+          p.bottomMargin = dp(2);
+        }
         block.addView(line, p);
       }
       blocks.add(block);
@@ -922,6 +934,18 @@ public class MainActivity extends Activity implements HaClient.Listener {
     cols.addView(left, lpLeft);
     cols.addView(right, lpRight);
     agendaList.addView(cols, lp(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT, 0));
+  }
+
+  private static final String[][] PARTY = {
+    {"\uD83C\uDF82", "\uD83C\uDF89"}, // birthday cake, party popper
+    {"\uD83C\uDF88", "\uD83C\uDF88"}, // two balloons
+    {"\uD83C\uDF70", "\uD83C\uDF8A"}, // cake slice, confetti ball
+  };
+
+  /** Wraps a birthday title in party emoji; the choice depends on the title so it stays the same between refreshes. */
+  private static String birthdayTitle(String title) {
+    String[] set = PARTY[(title.hashCode() & 0x7fffffff) % PARTY.length];
+    return set[0] + " " + title + " " + set[1];
   }
 
   private void refreshForecast() {
