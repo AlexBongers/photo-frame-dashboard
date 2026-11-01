@@ -58,6 +58,8 @@ final class HaClient {
   private final Listener listener;
   private volatile boolean running;
   private volatile WebSocketClient ws;
+  private final Map<Integer, Callback> pending = new ConcurrentHashMap<>();
+  private final java.util.concurrent.atomic.AtomicInteger nextId = new java.util.concurrent.atomic.AtomicInteger(1000);
   private String baseUrl;
   private String token;
 
@@ -144,6 +146,10 @@ final class HaClient {
               gotStates[0] = true;
               status(true, "verbonden");
               main.post(() -> listener.onState(null));
+            } else if ("result".equals(type) && pending.containsKey(m.optInt("id"))) {
+              Callback cb = pending.remove(m.optInt("id"));
+              JSONObject result = m.optBoolean("success") ? m.optJSONObject("result") : null;
+              main.post(() -> cb.done(result, null));
             } else if ("event".equals(type)) {
               JSONObject data = m.getJSONObject("event").getJSONObject("data");
               String id = data.getString("entity_id");
@@ -171,6 +177,25 @@ final class HaClient {
         return;
       }
     }
+  }
+
+  /** Sends a WebSocket command (for example recorder/statistics_during_period); the callback gets the result object, or null. */
+  void command(JSONObject message, Callback callback) {
+    WebSocketClient current = ws;
+    if (current == null) {
+      callback.done(null, null);
+      return;
+    }
+    int id = nextId.incrementAndGet();
+    pending.put(id, callback);
+    io.execute(() -> {
+      try {
+        current.sendText(message.put("id", id).toString());
+      } catch (Exception e) {
+        Callback cb = pending.remove(id);
+        if (cb != null) main.post(() -> cb.done(null, null));
+      }
+    });
   }
 
   private void put(String id, JSONObject s) {

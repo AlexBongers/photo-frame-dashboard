@@ -103,7 +103,14 @@
             {"label": "Plexplug gang", "entity": "sensor.plexpluggang_vermogen", "unit": "W"}
           ]
         }
-      ]
+      ],
+      "graph": {
+        "title": "Vermogen",
+        "series": [
+          {"entity": "sensor.p1_meter_vermogen", "label": "Verbruik", "accent": 0},
+          {"entity": "sensor.inverter_lexlau_vermogen", "label": "Zon", "accent": 1}
+        ]
+      }
     },
     {
       "title": "Boodschappen",

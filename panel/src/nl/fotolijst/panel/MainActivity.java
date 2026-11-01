@@ -595,6 +595,7 @@ public class MainActivity extends Activity implements HaClient.Listener {
     handler.removeCallbacks(musicTick);
     if ("music".equals(pageTypes.get(index))) handler.post(musicTick);
     if ("shopping".equals(pageTypes.get(index))) refreshShopping();
+    if ("cards".equals(pageTypes.get(index))) refreshGraph();
     for (int i = 0; i < pages.size(); i++) {
       pages.get(i).setVisibility(i == index ? View.VISIBLE : View.GONE);
       tabViews.get(i).setTextColor(i == index ? cAccent : cSub);
@@ -2106,7 +2107,7 @@ public class MainActivity extends Activity implements HaClient.Listener {
     for (JSONObject it : done) {
       final String uid = it.optString("uid", it.optString("summary"));
       final String name = bringName(it.optString("summary"));
-      TextView chip = tv(name, 24, cSub, false);
+      TextView chip = tv(name, 24, cText, false);
       chip.setPadding(dp(18), 0, dp(14), 0);
       chip.setGravity(Gravity.CENTER_VERTICAL);
       chip.setMaxLines(1);
@@ -2182,8 +2183,9 @@ public class MainActivity extends Activity implements HaClient.Listener {
   // ------------------------------------------------------------------ page: cards (Energie)
 
   private View buildCards(JSONObject page) {
+    LinearLayout outer = vbox();
+    outer.setPadding(dp(8), dp(12), dp(8), dp(12));
     LinearLayout root = hbox();
-    root.setPadding(dp(8), dp(12), dp(8), dp(12));
     int[] accents = dark
         ? new int[] {0xFF4FC3F7, 0xFFFFC107, 0xFF81C784, 0xFFBA68C8}
         : new int[] {0xFF0288D1, 0xFFF9A825, 0xFF2E9E5B, 0xFF8E4EC6};
@@ -2192,7 +2194,7 @@ public class MainActivity extends Activity implements HaClient.Listener {
       JSONObject def = cards.optJSONObject(c);
       int accent = accents[c % accents.length];
       LinearLayout card = card();
-      card.setPadding(dp(22), dp(20), dp(22), dp(20));
+      card.setPadding(dp(22), dp(16), dp(22), dp(10));
 
       LinearLayout head = hbox();
       head.setGravity(Gravity.CENTER_VERTICAL);
@@ -2213,8 +2215,8 @@ public class MainActivity extends Activity implements HaClient.Listener {
         final String entity = main.optString("entity");
         final int digits = main.optInt("digits", 0);
         final String unit = main.optString("unit");
-        final TextView big = tv("–", 84, accent, true);
-        big.setPadding(0, dp(14), 0, dp(14));
+        final TextView big = tv("–", 72, accent, true);
+        big.setPadding(0, dp(8), 0, dp(8));
         card.addView(big);
         bind(entity, () -> big.setText(bigValue(entity, digits, unit)));
       }
@@ -2235,13 +2237,108 @@ public class MainActivity extends Activity implements HaClient.Listener {
         final TextView v = tv("–", main != null ? 28 : 40, cText, true);
         row.addView(v);
         bind(entity, () -> v.setText(bigValue(entity, digits, unit)));
-        card.addView(row, lp(ViewGroup.LayoutParams.MATCH_PARENT, dp(main != null ? 56 : 84), 0));
+        card.addView(row, lp(ViewGroup.LayoutParams.MATCH_PARENT, dp(main != null ? 50 : 84), 0));
       }
       LinearLayout.LayoutParams cp = lp(0, ViewGroup.LayoutParams.MATCH_PARENT, 1);
       cp.setMargins(dp(8), 0, dp(8), 0);
       root.addView(card, cp);
     }
-    return root;
+    outer.addView(root, lp(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1.17f));
+    JSONObject graph = page.optJSONObject("graph");
+    if (graph != null) {
+      outer.addView(buildGraph(graph, accents), lp(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1));
+    }
+    return outer;
+  }
+
+  // The power graph under the Energie cards: long-term statistics (5 minute means) over the last 6 or 24 hours.
+  private PowerGraph graphView;
+  private JSONArray graphSeries;
+  private long graphFetchedAt;
+
+  private View buildGraph(JSONObject def, int[] accents) {
+    graphSeries = def.optJSONArray("series");
+    LinearLayout card = card();
+    card.setPadding(dp(22), dp(14), dp(22), dp(10));
+    LinearLayout head = hbox();
+    head.setGravity(Gravity.CENTER_VERTICAL);
+    TextView title = tv(def.optString("title", "VERMOGEN").toUpperCase(java.util.Locale.ROOT), 16, cSub, true);
+    title.setLetterSpacing(0.14f);
+    head.addView(title);
+    graphView = new PowerGraph(this, cSub, cBorder);
+    for (int i = 0; graphSeries != null && i < graphSeries.length(); i++) {
+      JSONObject sd = graphSeries.optJSONObject(i);
+      int color = accents[sd.optInt("accent", i) % accents.length];
+      graphView.addSeries(new PowerGraph.Series(color, sd.optString("label")));
+      View dot = new View(this);
+      GradientDrawable d = new GradientDrawable();
+      d.setShape(GradientDrawable.OVAL);
+      d.setColor(color);
+      dot.setBackground(d);
+      LinearLayout.LayoutParams dp = lp(dp(10), dp(10), 0);
+      dp.leftMargin = dp(i == 0 ? 22 : 16);
+      head.addView(dot, dp);
+      TextView l = tv(sd.optString("label"), 16, cText, false);
+      l.setPadding(dp(6), 0, 0, 0);
+      head.addView(l);
+    }
+    card.addView(head);
+    card.addView(graphView, lp(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1));
+    LinearLayout.LayoutParams cp = lp(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1);
+    cp.setMargins(dp(8), dp(12), dp(8), 0);
+    card.setLayoutParams(cp);
+    handler.postDelayed(graphTick, 5 * 60000L);
+    return card;
+  }
+
+  private final Runnable graphTick = new Runnable() {
+    @Override
+    public void run() {
+      if (currentPage < pageTypes.size() && "cards".equals(pageTypes.get(currentPage))) refreshGraph();
+      handler.postDelayed(this, 5 * 60000L);
+    }
+  };
+
+  private void refreshGraph() {
+    if (graphView == null || ha == null || graphSeries == null) return;
+    if (System.currentTimeMillis() - graphFetchedAt < 20000) return;
+    graphFetchedAt = System.currentTimeMillis();
+    // The current day from midnight, with a few hours after now on the axis (never past the next midnight)
+    final long now = System.currentTimeMillis();
+    final long from = Fmt.startOfDay(now);
+    final long to = Math.min(now + 3 * 3600000L, Fmt.addDays(from, 1));
+    JSONObject msg = new JSONObject();
+    try {
+      JSONArray ids = new JSONArray();
+      for (int i = 0; i < graphSeries.length(); i++) ids.put(graphSeries.getJSONObject(i).optString("entity"));
+      java.text.SimpleDateFormat iso = new java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", java.util.Locale.US);
+      iso.setTimeZone(java.util.TimeZone.getTimeZone("UTC"));
+      msg.put("type", "recorder/statistics_during_period").put("start_time", iso.format(new java.util.Date(from)))
+          .put("statistic_ids", ids).put("period", "5minute").put("types", new JSONArray().put("mean"));
+    } catch (Exception e) {
+      return;
+    }
+    ha.command(msg, (result, unused) -> {
+      if (result == null) {
+        graphFetchedAt = 0;
+        graphView.setMessage("Geschiedenis niet beschikbaar");
+        return;
+      }
+      graphView.setWindow(from, to);
+      for (int i = 0; i < graphSeries.length(); i++) {
+        JSONArray rows = result.optJSONArray(graphSeries.optJSONObject(i).optString("entity"));
+        int n = rows == null ? 0 : rows.length();
+        PowerGraph.Series ser = graphView.series(i);
+        ser.times = new long[n];
+        ser.values = new float[n];
+        for (int k = 0; k < n; k++) {
+          JSONObject row = rows.optJSONObject(k);
+          ser.times[k] = row.optLong("start") + 150000L;
+          ser.values[k] = (float) Math.max(0, row.optDouble("mean", 0));
+        }
+      }
+      graphView.changed();
+    });
   }
 
   /** A value with its unit in a smaller size, for the big numbers on the Energie cards. */
