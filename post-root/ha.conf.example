@@ -1,0 +1,14 @@
+# Settings for post-root.sh. Copy to post-root/ha.conf and edit. ha.conf is ignored by git.
+# Do not put passwords or tokens here or in the URL: sign in on the frame itself, with a
+# dedicated Home Assistant user, so the login stays in the kiosk's WebView storage.
+
+# The page the kiosk shows. Include the dashboard path, for example:
+#   http://homeassistant.local:8123/lovelace-frame/0
+#   https://<your-name>.ui.nabu.casa/lovelace-frame/0
+HA_URL=
+
+# Time zone for the frame (the stock firmware ships America/New_York).
+TIMEZONE=Europe/Amsterdam
+
+# Page text size in percent (100 is normal). Needs the kiosk build with text_zoom support.
+TEXT_ZOOM=

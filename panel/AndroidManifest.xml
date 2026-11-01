@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="nl.fotolijst.panel">
+
+  <uses-permission android:name="android.permission.INTERNET" />
+  <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+  <uses-permission android:name="android.permission.WAKE_LOCK" />
+  <!-- For the night mode: the user grants it once in Settings (see README). -->
+  <uses-permission android:name="android.permission.WRITE_SETTINGS" />
+
+  <application
+      android:label="Fotolijst Panel"
+      android:icon="@mipmap/ic_launcher"
+      android:hardwareAccelerated="true"
+      android:usesCleartextTraffic="true"
+      android:networkSecurityConfig="@xml/network_security_config"
+      android:theme="@android:style/Theme.NoTitleBar.Fullscreen">
+    <activity
+        android:name=".MainActivity"
+        android:launchMode="singleTask"
+        android:screenOrientation="sensorLandscape"
+        android:configChanges="orientation|screenSize|keyboardHidden|keyboard">
+      <intent-filter>
+        <action android:name="android.intent.action.MAIN" />
+        <category android:name="android.intent.category.LAUNCHER" />
+        <category android:name="android.intent.category.DEFAULT" />
+      </intent-filter>
+    </activity>
+    <receiver android:name=".NightWakeReceiver" android:exported="false" />
+    <!-- Off by default so installing the panel doesn't bring up a Home chooser. MainActivity turns
+         it on with the "home" extra, the same way as the Home HQ kiosk. -->
+    <activity-alias
+        android:name=".Home"
+        android:targetActivity=".MainActivity"
+        android:enabled="false"
+        android:exported="true">
+      <intent-filter>
+        <action android:name="android.intent.action.MAIN" />
+        <category android:name="android.intent.category.HOME" />
+        <category android:name="android.intent.category.DEFAULT" />
+      </intent-filter>
+    </activity-alias>
+  </application>
+</manifest>

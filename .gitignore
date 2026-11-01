@@ -20,3 +20,9 @@ scripts/si006-webview-overlay/build/
 
 # Private per-frame records (docs/frame-records.md). No trailing slash, so a symlink is ignored too.
 /frames
+
+# Home Assistant kiosk settings for post-root/post-root.sh (URL, time zone).
+/post-root/ha.conf
+
+# Native panel app build output.
+/panel/build/

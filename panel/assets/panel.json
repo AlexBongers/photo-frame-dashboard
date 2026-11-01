@@ -1,0 +1,140 @@
+{
+  "theme": "dark",
+  "ambient": {
+    "enabled": true,
+    "smoothing_seconds": 2,
+    "curve": [[0, 0.03], [3, 0.06], [10, 0.12], [30, 0.25], [150, 0.5], [600, 0.8], [2000, 1.0]],
+    "dim_curve": [[0, 0.55], [3, 0.45], [10, 0.3], [30, 0.12], [80, 0.0]],
+    "auto_theme": {"enabled": true, "to_light_lux": 250, "to_dark_lux": 80, "hold_seconds": 20}
+  },
+  "night": {
+    "enabled": true,
+    "from": "23:30",
+    "to": "07:00",
+    "only_when_dark": true,
+    "dark_lux": 25,
+    "dark_minutes": 3,
+    "idle_seconds": 120,
+    "wake_lux": 60
+  },
+  "weather": "weather.buienradar",
+  "calendars": [
+    "calendar.family",
+    "calendar.alex_prive",
+    "calendar.alex_werk",
+    "calendar.parro_agenda",
+    "calendar.verjaardagen",
+    "calendar.feestdagen_in_nederland"
+  ],
+  "pages": [
+    {
+      "title": "Vandaag",
+      "type": "today",
+      "temps": [
+        {"entity": "sensor.lexlauhome_buitentemperatuur", "name": "Buiten"},
+        {"entity": "sensor.eethoek_temp_sonos_temperatuur", "name": "Eethoek"},
+        {"entity": "sensor.verwarming_temperatuur", "name": "Zithoek"},
+        {"entity": "sensor.lucas_vindstyrka_temperatuur", "name": "Lucas"},
+        {"entity": "sensor.lana_vindstyrka_temperatuur", "name": "Lana"},
+        {"entity": "sensor.zolder_temp_temperatuur", "name": "Zolder"},
+        {"entity": "sensor.hue_motion_sensor_garage_temperatuur", "name": "Garage"}
+      ]
+    },
+    {
+      "title": "Klimaat",
+      "type": "climate",
+      "items": [
+        {"entity": "climate.midea_ac_144036023290591", "name": "Eethoek"},
+        {"entity": "climate.midea_ac_21990232567739", "name": "Slaapkamer"},
+        {"entity": "climate.midea_ac_18691697784083", "name": "Zolder"},
+        {"entity": "climate.verwarming", "name": "Verwarming"}
+      ]
+    },
+    {
+      "title": "Licht",
+      "type": "lights",
+      "groups": [
+        {"title": "Beneden", "items": [
+          {"entity": "light.woonkamer", "name": "Woonkamer"},
+          {"entity": "light.keuken", "name": "Keuken"},
+          {"entity": "light.eethoek", "name": "Eethoek"}
+        ]},
+        {"title": "Boven", "items": [
+          {"entity": "light.slaapkamer", "name": "Slaapkamer"},
+          {"entity": "light.zolder", "name": "Zolder"},
+          {"entity": "light.badkamer", "name": "Badkamer"},
+          {"entity": "light.radiator_badkamer_2", "name": "Radiator badkamer"}
+        ]},
+        {"title": "Buiten", "items": [
+          {"entity": "light.buitenlampen", "name": "Buitenlampen"},
+          {"entity": "light.garage", "name": "Garage"},
+          {"entity": "light.kapschuur", "name": "Kapschuur"},
+          {"entity": "light.3d_printers", "name": "3D-printers"}
+        ]}
+      ]
+    },
+    {
+      "title": "Energie",
+      "type": "cards",
+      "cards": [
+        {
+          "title": "Verbruik nu",
+          "main": {"entity": "sensor.p1_meter_vermogen", "unit": "W", "digits": 0},
+          "lines": [
+            {"label": "Fase 1", "entity": "sensor.p1_meter_vermogen_fase_1", "unit": "W"},
+            {"label": "Fase 2", "entity": "sensor.gang_p1_meter_vermogen_fase_2", "unit": "W"},
+            {"label": "Fase 3", "entity": "sensor.gang_p1_meter_vermogen_fase_3", "unit": "W"}
+          ]
+        },
+        {
+          "title": "Zon nu",
+          "main": {"entity": "sensor.inverter_lexlau_vermogen", "unit": "W", "digits": 0},
+          "lines": [
+            {"label": "Vandaag", "entity": "sensor.inverter_lexlau_energy_today", "unit": "kWh", "digits": 1},
+            {"label": "Deze week", "entity": "sensor.zolder_inverter_lexlauomvormer_energy_this_week", "unit": "kWh", "digits": 1},
+            {"label": "Deze maand", "entity": "sensor.inverter_lexlau_energy_this_month", "unit": "kWh", "digits": 0},
+            {"label": "Dit jaar", "entity": "sensor.zolder_inverter_lexlauomvormer_energy_this_year", "unit": "kWh", "digits": 0}
+          ]
+        },
+        {
+          "title": "Stekkers",
+          "lines": [
+            {"label": "Wasmachine", "entity": "sensor.plug_wasmachine_vermogen", "unit": "W"},
+            {"label": "Plexplug gang", "entity": "sensor.plexpluggang_vermogen", "unit": "W"}
+          ]
+        }
+      ]
+    },
+    {
+      "title": "Boodschappen",
+      "type": "shopping",
+      "list": "todo.thuis"
+    },
+    {
+      "title": "Muziek",
+      "type": "music",
+      "list_title": "SPOTIFY PLAYLISTS",
+      "playlists": [
+        {"name": "Lau's list", "uri": "spotify:playlist:4QSjTmFt8snKbfSlQSkMq8"},
+        {"name": "Bookmarkd", "uri": "spotify:playlist:439NhNFA4fTWpBujzuM8ji"},
+        {"name": "Club Zand — Summer Vibe", "uri": "spotify:playlist:0C6uVz0WivPHRab2U11tTO"},
+        {"name": "Home", "uri": "spotify:playlist:7k1qKoRw5l0nVUiSoY5mS0"},
+        {"name": "De Muppets", "uri": "spotify:playlist:5kUipk2EOW1E52fbbtJjlt"},
+        {"name": "The Best of Sade", "uri": "spotify:album:3uSWaQxJAdm5MWKQkQJNoK"},
+        {"name": "The Best Of 70's", "uri": "spotify:playlist:7e6gKFwEXMF6uDQzmD9YXn"},
+        {"name": "November Moments", "uri": "spotify:album:6av6fWVNNmRAV77tKqPQaK"},
+        {"name": "Lekkere rock nummers", "uri": "spotify:playlist:08HDn38m7loZjE0xDmSNLX"},
+        {"name": "Sunday morning", "uri": "spotify:playlist:5LmQbXzNbIz0mhSvsnGl1O"},
+        {"name": "Sinterklaas", "uri": "spotify:playlist:6adQ2rqSKiit1USTzcj3b6"},
+        {"name": "Samenfeest", "uri": "spotify:playlist:3zvNFDCAcyEzzS4z3SNyfb"},
+        {"name": "Lana", "uri": "spotify:playlist:3c4PZnIPCDh3HGZbHr1hXt"}
+      ],
+      "players": [
+        {"entity": "media_player.zithoek_l_r", "name": "Zithoek"},
+        {"entity": "media_player.eethoek", "name": "Eethoek"},
+        {"entity": "media_player.keuken_sidetable", "name": "Keuken"},
+        {"entity": "media_player.tv", "name": "Tv"}
+      ]
+    }
+  ]
+}

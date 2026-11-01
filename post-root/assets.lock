@@ -1,0 +1,7 @@
+# name | url | sha256 | kind
+# kind "file": sha256 is of the downloaded file.
+# kind "cert": sha256 is of the DER form of the PEM certificate (docs/si006-uhale.md).
+# Sources and hashes are the pinned ones from docs/allwinner-a33-pf1007l.md section 5 and 6.
+rootless.apk|https://f-droid.org/repo/amirz.rootless.nexuslauncher_30911.apk|7fa44d560dc4577374d45176220de2c0b00a71e09d6d148cdea4e0a52d38404a|file
+webview.apk|https://raw.githubusercontent.com/LineageOS/android_external_chromium-webview_prebuilt_arm/4b0ae494a7dd/webview.apk|e2edc1f89ec1608b169da9e7ffc037190b70c7825f0be29694f4cae719980580|file
+isrgrootx1.pem|https://letsencrypt.org/certs/isrgrootx1.pem|96bcec06264976f37460779acf28c5a7cfe8a3c0aae11a8ffcee05c0bddf08c6|cert

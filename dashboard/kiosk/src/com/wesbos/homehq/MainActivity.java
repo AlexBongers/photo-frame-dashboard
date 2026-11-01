@@ -51,6 +51,8 @@ import java.util.Map;
  * - Immersive mode hides the status + navigation bars (true 1280x800).
  * - Controls: hold two fingers still on the screen for 1.5s for launcher/settings/Wi-Fi/reload.
  *   Optional single-tap Menu button: launch with --ez menu_button true (false removes it).
+ *   Optional page text size: launch with --ei text_zoom 125 (percent, 50 to 300; 100 is normal).
+ *   Optional tab warm-up after the first load: launch with --ez warm_tabs true (false turns it off).
  * - Offline: a failed page load shows a native screen instead of WebView's error page (which
  *   prints the full URL, including any token in it). With no Wi-Fi it offers Wi-Fi settings.
  * - Remote debugging is OFF unless launched with the debug extra (every app on this device
@@ -72,6 +74,8 @@ public class MainActivity extends Activity {
   static final String PREFS = "kiosk";
   static final String PREF_URL = "url";
   static final String PREF_MENU_BUTTON = "menu_button";
+  static final String PREF_TEXT_ZOOM = "text_zoom";
+  static final String PREF_WARM_TABS = "warm_tabs";
   static final long EXIT_HOLD_MS = 1500;
   static final int CANCEL_POINTER_IDS = 10; // touch ids 0-9
   static final long RETRY_MS = 5000;
@@ -93,6 +97,7 @@ public class MainActivity extends Activity {
   private WebView web;
   private Button menuButton;
   private final Handler handler = new Handler(Looper.getMainLooper());
+  private boolean warmedTabs;
   // Not cleared in onDestroy, so a navigation rebind that has started always finishes.
   private final Handler rebindHandler = new Handler(Looper.getMainLooper());
   private final int[] exitIds = new int[2];
@@ -188,6 +193,7 @@ public class MainActivity extends Activity {
     s.setDomStorageEnabled(true);
     s.setUseWideViewPort(true);
     s.setMediaPlaybackRequiresUserGesture(false);
+    s.setTextZoom(savedTextZoom());
     // Keep navigation inside the kiosk. When the kiosk starts at boot before Wi-Fi is up, the
     // first load fails and would stay on the error page, so retry failed main-frame loads.
     // The offline screen covers WebView's error page until a load succeeds.
@@ -214,6 +220,7 @@ public class MainActivity extends Activity {
         if (!pageFailed && !retryPending) {
           offline.setVisibility(View.GONE);
           handler.removeCallbacks(stall);
+          warmTabs(view);
         }
       }
 
@@ -294,6 +301,7 @@ public class MainActivity extends Activity {
     menuPosition.setMargins(dp(12), dp(12), dp(12), dp(12));
     root.addView(menuButton, menuPosition);
     applyMenuButtonFlag(getIntent());
+    applyTextZoomFlag(getIntent());
     setContentView(root);
 
     String url = urlFrom(getIntent());
@@ -324,6 +332,7 @@ public class MainActivity extends Activity {
     applyDebugFlag(intent);
     applyHomeFlag(intent);
     applyMenuButtonFlag(intent);
+    applyTextZoomFlag(intent);
     String url = urlFrom(intent);
     if (url != null) {
       closePortal();
@@ -743,6 +752,47 @@ public class MainActivity extends Activity {
     }
     menuButton.setVisibility(getSharedPreferences(PREFS, MODE_PRIVATE)
         .getBoolean(PREF_MENU_BUTTON, false) ? View.VISIBLE : View.GONE);
+  }
+
+  /**
+   * Home Assistant loads each dashboard tab's card code the first time the tab is shown, which on a
+   * slow panel takes seconds. With warm_tabs on, the first load walks through every tab once in the
+   * background so later taps are quick. Runs once per process; a touch just interrupts nothing.
+   */
+  private void warmTabs(WebView view) {
+    if (warmedTabs) return;
+    if (!getSharedPreferences(PREFS, MODE_PRIVATE).getBoolean(PREF_WARM_TABS, false)) return;
+    warmedTabs = true;
+    view.evaluateJavascript("(async()=>{"
+        + "const deep=(root,sel)=>{const out=[];const walk=(n)=>{if(n.querySelectorAll){"
+        + "n.querySelectorAll(sel).forEach(e=>out.push(e));"
+        + "n.querySelectorAll('*').forEach(e=>{if(e.shadowRoot)walk(e.shadowRoot);});}};walk(root);return out;};"
+        + "const wait=(ms)=>new Promise(r=>setTimeout(r,ms));"
+        + "let tabs=[];"
+        + "for(let i=0;i<90;i++){tabs=deep(document,'[role=tab]');"
+        + "if(tabs.length>1&&deep(document,'hui-card').length>0)break;await wait(1000);}"
+        + "if(tabs.length<2)return;"
+        + "await wait(4000);"
+        + "for(const t of tabs.slice(1)){t.click();await wait(3000);}"
+        + "tabs[0].click();})()", null);
+    Log.i(TAG, "Warming dashboard tabs");
+  }
+
+  private int savedTextZoom() {
+    return getSharedPreferences(PREFS, MODE_PRIVATE).getInt(PREF_TEXT_ZOOM, 100);
+  }
+
+  /** A saved text size for the page, in percent (100 is normal); layout sizes in px don't change. */
+  private void applyTextZoomFlag(Intent intent) {
+    if (intent != null && intent.hasExtra(PREF_WARM_TABS)) {
+      getSharedPreferences(PREFS, MODE_PRIVATE).edit()
+          .putBoolean(PREF_WARM_TABS, intent.getBooleanExtra(PREF_WARM_TABS, false)).apply();
+    }
+    if (intent != null && intent.hasExtra(PREF_TEXT_ZOOM)) {
+      int percent = Math.max(50, Math.min(300, intent.getIntExtra(PREF_TEXT_ZOOM, 100)));
+      getSharedPreferences(PREFS, MODE_PRIVATE).edit().putInt(PREF_TEXT_ZOOM, percent).apply();
+    }
+    if (web != null) web.getSettings().setTextZoom(savedTextZoom());
   }
 
   /** Turns the Home alias on or off. The shell can't enable a component of a release app. */
